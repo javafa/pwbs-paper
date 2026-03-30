@@ -1,8 +1,12 @@
-"""PWBS prompting: 5-tuple 구조 (Goal → Assumption → Constraint → Task → Validation) 유도.
+"""PWBS prompting: 6-tuple 구조 (Goal → Assumption → Formula → Constraint → Task → Validation) 유도.
 
 PWBS 방법론의 핵심 프롬프트 템플릿.
 실제 실행은 engine/feedback_loop.py의 pwbs_execute()에서 수행.
 이 모듈은 단순 single-call PWBS 프롬프트를 제공한다.
+
+Note: 이 템플릿은 Formula 섹션이 없는 범용 버전이다.
+수식이 포함된 태스크에서는 engine/planner.py의 Formula Preserving 메커니즘이
+별도로 [FORMULA] 섹션을 주입한다. 논문의 6-tuple 정의 참고.
 """
 
 PWBS_TEMPLATE = """다음 과제를 PWBS(Prompt Work Breakdown Structure) 프레임워크에 따라 수행하시오.

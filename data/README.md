@@ -25,4 +25,12 @@ Each task includes: task description, ground truth, evaluation criteria, constra
 
 ## Reproducing Experiments
 
-See the main [README.md](../README.md) for full experiment setup and execution instructions.
+The experiment code (runner, evaluator, LLM client) is available in the companion repository `pwbs_experiment/`. This `data/` directory contains the benchmark inputs and prompt templates used in the paper. To reproduce:
+
+1. Set up OpenAI API key in `config/settings.py`
+2. Run: `python3 run_experiment.py --step main` (main experiment, 75 tasks × 5 methods × 2 models)
+3. Run: `python3 run_experiment.py --step ablation` (ablation study)
+4. Run: `python3 run_experiment.py --step consistency` (reasoning consistency)
+5. Run: `python3 run_experiment.py --step public --primary-only` (GSM8K + BBH, GPT-4o only)
+
+See the paper (Section 5) for full experimental setup details.

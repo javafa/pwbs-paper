@@ -35,7 +35,8 @@ def build_public_prompt(task: dict, method: str) -> str:
 
     # BBH: 원본 형식 유지 (이미 지시문 포함)
     elif category == "bbh":
-        subtask = task.get("subcategory", "")
+        # subtask is available via task.get("subcategory", "") for
+        # future subtask-specific handling (e.g., per-subtask instructions).
         task_input = (
             f"{task_input}\n\n"
             "Provide only the final answer without explanation."
