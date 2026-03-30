@@ -1,12 +1,12 @@
-# PWBS: Prompt Work Breakdown Structure
+# PWBS: Prompt Work Breakdown Structure — A Structured Planning Framework for LLM Reasoning
 
-A structured prompting framework that applies Work Breakdown Structure (WBS) principles to LLM prompt engineering.
+A structured prompting framework inspired by Work Breakdown Structure (WBS) principles (PMBOK; PMI, 2021) for LLM prompt engineering. **PWBS targets multi-constraint structured-output tasks** — such as travel planning, code debugging, and data analysis — where multiple conditions must be simultaneously satisfied and outputs require complex structure, rather than single-answer problem solving.
 
 ## Abstract
 
 Large Language Models often fail to satisfy multiple constraints simultaneously, lose critical formulas during multi-call architectures, and produce inconsistent outputs across repeated runs. PWBS addresses these challenges by decomposing prompts into six explicit components — **Goal, Assumption, Formula, Constraint, Task, and Validation** — using a 4-step Invalidation Test for systematic classification.
 
-Experiments on 75 custom benchmarks across three domains (travel planning, code debugging, logical reasoning) and 210 public benchmark tasks (GSM8K, BIG-Bench Hard) with GPT-4o and GPT-4o-mini demonstrate that selectively applying structural components improves task success rate and reasoning consistency.
+Experiments on 75 custom benchmarks across three domains (travel planning, code debugging, logical reasoning) and 210 public benchmark tasks (GSM8K; Cobbe et al., 2021, BIG-Bench Hard; Suzgun et al., 2023) with GPT-4o and GPT-4o-mini demonstrate that selectively applying structural components improves task success rate and reasoning consistency. Public benchmark validation confirms PWBS's scope: it underperforms baselines on single-answer tasks but achieves the highest score on boolean_expressions (96.7%), where logical structure aligns with PWBS components.
 
 ## Key Findings
 
@@ -90,7 +90,9 @@ Tested on GPT-4o: CoT base, CoT+A, CoT+C, CoT+F, CoT+V, CoT+AC, CoT+ACFV
 | date_understanding (n=25) | 60.0% | **68.0%** | 64.0% | 28.0% |
 | tracking_shuffled (n=25) | 36.0% | 36.0% | 36.0% | 16.0% |
 
-PWBS achieves the highest score (96.7%) on boolean_expressions where logical structure aligns with PWBS components, confirming its value as a **selective** tool for structure-amenable tasks.
+PWBS achieves the highest score (96.7%) on boolean_expressions where logical structure aligns with PWBS components, confirming its value as a **selective** tool for structure-amenable tasks. Note: PWBS targets multi-constraint structured-output tasks; these single-answer benchmarks test generalization boundaries rather than the intended use case.
+
+> **Statistical note:** Main experiment pairwise comparisons show no statistically significant differences ($p > 0.05$). Ablation differences (e.g., +4.0%p, +8.0%p) are directional observations on per-category subsets ($n=25$), not formally significance-tested.
 
 ## Compilation
 
@@ -99,16 +101,43 @@ pdflatex main.tex
 pdflatex main.tex  # run twice for TOC and references
 ```
 
-Requires standard LaTeX packages: `booktabs`, `multirow`, `hyperref`, `geometry`, `kotex` (for Korean text support).
+Requires standard LaTeX packages: `booktabs`, `multirow`, `hyperref`, `geometry`, `natbib`.
 
 ## Repository Structure
 
 ```
-├── main.tex          # Full paper LaTeX source
+├── main.tex                          # Full paper LaTeX source
 ├── README.md
 ├── .gitignore
-└── LICENSE
+├── LICENSE
+└── data/
+    ├── README.md                     # Data documentation
+    ├── benchmarks/
+    │   ├── travel_planning.json      # Category A: 25 tasks
+    │   ├── code_debugging.json       # Category B: 25 tasks
+    │   └── logical_reasoning.json    # Category C: 25 tasks
+    └── prompts/
+        ├── direct.py                 # Direct prompting template
+        ├── cot.py                    # Chain-of-Thought template
+        ├── plan_and_solve.py         # Plan-and-Solve template
+        ├── pwbs.py                   # PWBS 6-tuple template
+        ├── cot_pwbs.py               # Ablation combinations (CoT+A, CoT+C, etc.)
+        └── public_adapter.py         # GSM8K/BBH prompt wrapper
 ```
+
+## Key References
+
+- Wei et al. (2022) — Chain-of-Thought Prompting
+- Wang et al. (2023a) — Plan-and-Solve Prompting
+- Wang et al. (2023b) — Self-Consistency
+- Zhou et al. (2023) — Least-to-Most Prompting
+- Khot et al. (2023) — Decomposed Prompting
+- Chen et al. (2023) — Program of Thoughts
+- Cobbe et al. (2021) — GSM8K
+- Suzgun et al. (2023) — BIG-Bench Hard
+- PMI (2021) — PMBOK Guide (WBS)
+
+Full reference list (16 papers) in `main.tex`.
 
 ## Authors
 
