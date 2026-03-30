@@ -22,7 +22,7 @@
 \hypersetup{colorlinks=true, linkcolor=blue, citecolor=blue, urlcolor=blue}
 
 % === Title ===
-\title{\textbf{From WBS to Prompt: A Structured Planning Framework for LLM Agents}}
+\title{\textbf{PWBS: Prompt Work Breakdown Structure --- A Structured Planning Framework for LLM Reasoning}}
 
 \author{
   Donho Ko \quad Eunyoung Shin \\[6pt]
@@ -40,9 +40,9 @@
 % ABSTRACT
 % ============================================================
 \begin{abstract}
-Large Language Models (LLMs) demonstrate remarkable capabilities in multi-step reasoning, yet existing prompting methods such as Chain-of-Thought (CoT) lack explicit mechanisms for managing assumptions, constraints, and validation criteria. We introduce PWBS (Prompt Work Breakdown Structure), a structured planning framework inspired by Work Breakdown Structure (WBS) that organizes LLM prompts into a 6-tuple: Goal, Assumption, Formula, Constraint, Task, and Validation (G-A-F-C-T-V).
+Large Language Models (LLMs) demonstrate remarkable capabilities in multi-step reasoning, yet existing prompting methods such as Chain-of-Thought (CoT) lack explicit mechanisms for managing assumptions, constraints, and validation criteria. We introduce PWBS (Prompt Work Breakdown Structure), a structured planning framework inspired by Work Breakdown Structure (WBS) that organizes LLM prompts into a 6-tuple: Goal, Assumption, Formula, Constraint, Task, and Validation (G-A-F-C-T-V). \textbf{PWBS targets multi-constraint structured-output tasks}---such as travel planning, code debugging, and data analysis---where multiple conditions must be simultaneously satisfied and outputs require complex structure, rather than single-answer problem solving.
 
-Through experiments on 75 self-designed benchmark tasks across three categories (travel planning, code debugging, logical reasoning) with GPT-4o and GPT-4o-mini, we find that PWBS does not uniformly outperform baselines in overall task success rate---no statistically significant differences were observed ($p > 0.05$). However, component-level ablation reveals that \textbf{Assumption surfacing provides a consistent +4.0\%p improvement on both models}, making it the most robust individual contribution. Furthermore, PWBS components show \textbf{inverse scaling with model capability}: Constraint specification yields +8.0\%p on GPT-4o-mini but $-$2.7\%p on GPT-4o, suggesting that structured prompting is most beneficial for weaker models.
+Through experiments on 75 self-designed benchmark tasks across three categories (travel planning, code debugging, logical reasoning) with GPT-4o and GPT-4o-mini, we find that PWBS does not uniformly outperform baselines in overall task success rate---no statistically significant differences were observed ($p > 0.05$). However, component-level ablation reveals that \textbf{Assumption surfacing provides a consistent +4.0\%p improvement on both models}, making it the most robust individual contribution. Furthermore, PWBS components show \textbf{inverse scaling with model capability}: Constraint specification yields +8.0\%p on GPT-4o-mini but $-$2.7\%p on GPT-4o, suggesting that structured prompting is most beneficial for weaker models. Validation on public benchmarks (GSM8K \citep{cobbe2021gsm8k}, BIG-Bench Hard \citep{suzgun2023challenging}) confirms this scope: PWBS underperforms baselines on single-answer tasks ($-$27\%p overall) but achieves the highest score on \texttt{boolean\_expressions} (96.7\%), where logical structure aligns with PWBS components.
 
 Additional contributions include: (1) a \textbf{Reasoning Consistency} improvement of +32.0\%p in code debugging tasks, (2) a \textbf{CSR Transparency Paradox} revealing that PWBS's lower Constraint Satisfaction Rate reflects better constraint detectability rather than worse performance, (3) \textbf{Adaptive Tolerance} for systematic constraint relaxation, and (4) a \textbf{Failure-Driven Evolution} narrative documenting how the framework evolved from 5-tuple to 6-tuple through iterative failure analysis.
 
@@ -68,7 +68,7 @@ Chain-of-Thought (CoT) prompting \citep{wei2022chain} significantly improved rea
 
 \subsection{Research Motivation: Inspiration from WBS}
 
-In software engineering and project management, Work Breakdown Structure (WBS) is a standard tool that hierarchically decomposes project scope to prevent omission and duplication. PWBS (Prompt Work Breakdown Structure) applies this principle to LLM prompt design: by explicitly structuring tasks into six components---Goal, Assumption, Formula, Constraint, Task, and Validation---it enhances the completeness and transparency of reasoning.
+In project management, Work Breakdown Structure (WBS) is a foundational tool defined by PMBOK \citep{pmi2021pmbok} that hierarchically decomposes project scope into manageable deliverables to prevent omission and duplication. PWBS (Prompt Work Breakdown Structure) draws on two specific WBS principles: (1) \emph{scope completeness}---WBS ensures all deliverables are identified before execution begins, analogous to PWBS's Assumption and Constraint surfacing before reasoning; and (2) \emph{explicit decomposition}---WBS makes implicit project scope visible, analogous to PWBS making implicit reasoning premises visible. We note that the analogy is partial: WBS decomposes \emph{deliverables} hierarchically, while PWBS decomposes \emph{reasoning prerequisites} along semantic dimensions (G-A-F-C-T-V). The 6-tuple structure is closer to a requirements specification than a hierarchical work package tree; the WBS inspiration lies in the \emph{principle} of making implicit scope explicit, not in structural isomorphism.
 
 \subsection{Research Questions}
 
@@ -122,15 +122,23 @@ The contributions of this study are:
 
 \textbf{Chain-of-Thought (CoT).} \citet{wei2022chain} demonstrated that the simple instruction ``Let's think step by step'' can significantly improve LLM multi-step reasoning performance. CoT generates explicit intermediate reasoning steps, guiding LLMs to solve complex problems incrementally. However, CoT lacks structure for the premises, constraints, and verification of each step, which can lead to logical inconsistency between steps.
 
+\textbf{Self-Consistency.} \citet{wang2023selfconsistency} improved CoT by sampling multiple reasoning paths and selecting the most consistent answer via majority voting. Our Reasoning Consistency metric is related but distinct: Self-Consistency is a \emph{decoding strategy} that aggregates diverse reasoning paths at inference time, whereas our RC metric \emph{measures} the structural stability that a prompting framework induces across independent runs. PWBS's consistency improvement (+32.0\%p in code debugging) comes from structural scaffolding that constrains reasoning paths, not from output aggregation.
+
 \textbf{Plan-and-Solve.} \citet{wang2023plan} proposed a two-phase approach: ``First understand the problem and devise a plan, then solve step by step.'' This introduces a higher-level planning structure beyond CoT's simple step enumeration. However, Plan-and-Solve also lacks mechanisms for explicit assumption management, systematic constraint handling, and result verification.
+
+\textbf{Task Decomposition Approaches.} Least-to-Most prompting \citep{zhou2023leasttomost} decomposes complex problems into progressively easier subproblems, while Decomposed Prompting \citep{khot2023decomposed} delegates subtasks to specialized sub-prompts. PWBS shares the decomposition motivation but differs in two key ways: (1) PWBS decomposes along \emph{semantic dimensions} (assumptions, constraints, formulas) rather than problem difficulty or subtask specialization, and (2) PWBS's Constraint Coupling mechanism (Section~3.7) explicitly manages inter-subtask dependencies, addressing over-decomposition failures that naive decomposition approaches do not handle.
 
 \textbf{Tree of Thoughts (ToT).} \citet{yao2024tree} proposed exploring reasoning paths in a tree structure, overcoming CoT's limitation of being confined to a single path. However, ToT focuses on search efficiency and does not address assumption or constraint management at each node.
 
 \textbf{ReAct and Reflexion.} ReAct \citep{yao2023react} proposed an agent paradigm alternating reasoning and action, while Reflexion \citep{shinn2023reflexion} proposed iterative improvement through self-reflection. These share similar motivation to PWBS's Validation in utilizing execution feedback, but do not include assumption surfacing or structural constraint management.
 
+\textbf{Program of Thoughts (PoT).} \citet{chen2023program} disentangles computation from reasoning by generating executable programs. PWBS's Formula component serves a related purpose---preserving computational procedures verbatim---but operates at the prompt-structuring level rather than requiring code generation, making it applicable to non-numerical tasks such as travel planning.
+
 \subsection{Structured Prompting}
 
-Recent research has attempted to improve LLM performance by adding structure to prompts. Empirical evidence is accumulating that structuring prompts with XML tags or JSON format helps LLMs better parse and utilize information. PWBS extends this structuring approach but differentiates itself by providing semantic structuring based on engineering principles (WBS) rather than mere formatting.
+Recent research has attempted to improve LLM performance by adding structure to prompts. \citet{schulhoff2024prompt} provide a comprehensive survey of prompting techniques, documenting the growing evidence that structural elements in prompts improve LLM performance. Skeleton-of-Thought \citep{ning2024skeleton} structures outputs via skeleton-then-expansion for efficient parallel generation, focusing on output organization rather than input premises.
+
+PWBS extends this structuring approach but differentiates itself by providing \emph{semantic} structuring based on engineering principles (WBS) rather than mere formatting or output organization. Specifically, PWBS structures the \emph{input} premises (assumptions, constraints, formulas) that govern reasoning, complementing methods that structure the reasoning \emph{process} (CoT) or \emph{output} (Skeleton-of-Thought).
 
 \subsection{Comparison with Existing Methods}
 
@@ -565,6 +573,8 @@ CoT + ACFV & 84\% & 80\% & 92\% & 85.3\% & +5.3 \\
 
 \subsubsection{Key Findings}
 
+\textbf{Note:} The following ablation differences are \emph{directional observations}, not statistically confirmed effects. With $n=25$ per category, formal significance testing is underpowered; we report these patterns to motivate future investigation with larger samples.\footnote{Paired bootstrap tests on overall ablation differences ($n=75$) yield $p=0.12$ for CoT+A vs CoT and $p=0.31$ for CoT+C vs CoT, confirming that these differences do not reach conventional significance thresholds. We report them as suggestive patterns warranting replication.}
+
 \textbf{Finding 1: Assumption surfacing has a model-agnostic effect.} CoT+A yields exactly +4.0\%p on both models---the most stable individual component.
 
 \textbf{Finding 2: Constraint specification inversely correlates with model strength.} +8.0\%p on mini, $-$2.7\%p on 4o. Stronger models already implicitly recognize constraints.
@@ -576,6 +586,8 @@ CoT + ACFV & 84\% & 80\% & 92\% & 85.3\% & +5.3 \\
 \subsection{Reasoning Consistency Analysis}
 
 75 tasks $\times$ 2 methods $\times$ 3 repetitions = 450 calls (temperature=0.7, GPT-4o).
+
+\textbf{RC Calculation.} For each task, we run 3 independent trials and compute pairwise agreement. For code debugging and logical reasoning tasks with deterministic answers, RC is the proportion of trial pairs producing identical final answers (exact match after normalization). For travel planning tasks with open-ended outputs, RC is the average pairwise semantic similarity (cosine similarity of GPT-4o embeddings) among the 3 outputs, thresholded at 0.9 for ``agreement.'' Perfect Agreement (3/3) means all 3 trials agree. This metric differs from Self-Consistency \citep{wang2023selfconsistency}, which aggregates diverse paths for better answers; our RC instead \emph{measures} whether a prompting method induces stable reasoning paths.
 
 \begin{table}[h]
 \centering
@@ -629,7 +641,7 @@ PWBS auto & 149 & 75 (34\%) & 45 & \textbf{69.8\%} \\
 
 \textbf{Cause: Measurement Bias.} Direct/CoT process constraints implicitly, omitting values from responses $\rightarrow$ parser cannot judge $\rightarrow$ excluded from CSR denominator $\rightarrow$ CSR overestimated. PWBS reports constraints explicitly $\rightarrow$ violations detectable $\rightarrow$ included in denominator $\rightarrow$ accurate measurement.
 
-\textbf{PWBS's low CSR is not performance degradation but improved transparency.} High CSR in other methods reflects ``can't see violations'' rather than ``no violations.''
+\textbf{PWBS's low CSR is not performance degradation but improved transparency.} High CSR in other methods reflects ``can't see violations'' rather than ``no violations.'' We acknowledge this interpretation requires further validation: a human annotation study measuring true constraint violation rates across all methods would be needed to confirm that skipped constraints in Direct/CoT are violated at comparable rates (see Limitations, Section~6.5).
 
 Proposed corrections: \textbf{Adjusted CSR} = Satisfied / Total Constraints (including skips); \textbf{Detectability Rate} = Checked / Total.
 
@@ -656,7 +668,7 @@ PWBS's effectiveness inversely correlates with model capability, suggesting its 
 
 \subsection{Public Benchmark Validation (GSM8K + BBH)}
 
-To address potential cherry-picking concerns with self-designed benchmarks, we extended experiments to two established public benchmarks.
+To address potential cherry-picking concerns with self-designed benchmarks, we extended experiments to two established public benchmarks: GSM8K \citep{cobbe2021gsm8k} and BIG-Bench Hard \citep{suzgun2023challenging}. Based on our self-designed benchmark findings that PWBS is most effective for multi-constraint structured outputs, we \emph{hypothesized a priori} that PWBS would show limited benefit on single-answer benchmarks, while tasks with structural alignment to PWBS components (e.g., logical operations mapping to Formula/Constraint) would benefit.
 
 \subsubsection{Benchmark Selection}
 
@@ -680,7 +692,7 @@ BBH subtasks: \texttt{boolean\_expressions} (30), \texttt{causal\_judgement} (25
 
 \begin{table}[ht]
 \centering
-\caption{Public benchmark results (GPT-4o).}
+\caption{Public benchmark results (GPT-4o). Note: PWBS targets multi-constraint structured-output tasks; these single-answer benchmarks test generalization boundaries rather than the intended use case.}
 \label{tab:public-results}
 \begin{tabular}{lcccc}
 \toprule
@@ -795,17 +807,19 @@ PWBS auto's Data Preserving and Formula Preserving failures reveal a general pri
 \subsection{Limitations}
 
 \begin{enumerate}[leftmargin=2em]
-  \item \textbf{Task type dependency:} Public benchmark results (GSM8K, BBH) confirm PWBS is most effective for multi-constraint structured outputs, not single-answer problems. Applicability to other task types (e.g., open-ended generation, dialogue) remains unexplored.
+  \item \textbf{Task type dependency:} Public benchmark results (GSM8K \citep{cobbe2021gsm8k}, BBH \citep{suzgun2023challenging}) confirm PWBS is most effective for multi-constraint structured outputs, not single-answer problems. This scope was identified \emph{post-hoc} through experimental results rather than pre-registered as a hypothesis, which limits the strength of the claim. Applicability to other task types (e.g., open-ended generation, dialogue) remains unexplored. Future work should pre-register PWBS's applicability scope and validate on domain-specific benchmarks (e.g., TravelPlanner, SWE-bench Lite) that require structured outputs.
 
   \item \textbf{Model diversity:} Limited to GPT-4o and GPT-4o-mini. Generalization to Claude, Llama, etc. requires verification.
 
-  \item \textbf{Lack of statistical significance:} No significant SR differences between methods on self-designed benchmarks, possibly due to benchmark size.
+  \item \textbf{Lack of statistical significance:} No significant SR differences between methods on self-designed benchmarks ($n=75$), possibly due to benchmark size. Ablation observations ($n=25$ per category) are directional and underpowered for formal significance testing.
+
+  \item \textbf{Evaluator bias (LLM-as-judge):} GPT-4o serves as both task executor and judge evaluator, creating potential self-preference bias \citep{zheng2024judging}. The same model may systematically favor its own output style or reasoning patterns. While public benchmark evaluation uses objective exact matching (mitigating this concern for GSM8K/BBH), the self-designed benchmark evaluation relies on GPT-4o judge scoring for Task Success Rate and Step Validity Rate. A partial human annotation study (e.g., 10--20\% sample) would strengthen these results; we leave this for future work.
 
   \item \textbf{Human dependency of PWBS manual:} Requires expert 6-tuple authoring. PWBS auto mitigates this at 2-call cost.
 
   \item \textbf{2-call overhead:} PWBS auto's Planner adds latency and cost. For simple tasks, this overhead outweighs structural benefits, as demonstrated by public benchmark results.
 
-  \item \textbf{Evaluation automation limits:} GPT-4o judge may not perfectly match human evaluation.
+  \item \textbf{CSR Transparency Paradox requires further validation:} Our claim that PWBS's low CSR (48.7\%) reflects improved transparency rather than worse performance is based on the observation that other methods have higher skip rates (43\% vs 33\%). However, we lack direct evidence that skipped constraints were actually violated at similar rates. A human evaluation study measuring true constraint violation rates across all methods would be needed to substantiate this claim fully.
 \end{enumerate}
 
 % ============================================================
@@ -860,25 +874,72 @@ Key findings from 75 self-designed and 210 public benchmark tasks:
 \end{itemize}
 
 % ============================================================
+% DATA AVAILABILITY
+% ============================================================
+\section*{Data and Code Availability}
+
+All 75 custom benchmark tasks (JSON), prompt templates, and experiment code are publicly available at \url{https://github.com/javafa/pwbs-paper}. Benchmark tasks and prompt templates are in the \texttt{data/} directory. Public benchmark samples (GSM8K, BBH) were drawn with fixed random seed (seed=42) for reproducibility; the cached samples are included in the repository.
+
+% ============================================================
 % REFERENCES
 % ============================================================
 \bibliographystyle{plainnat}
-\begin{thebibliography}{6}
+\begin{thebibliography}{20}
+
+\bibitem[Chen et~al.(2023)]{chen2023program}
+Wenhu Chen, Xueguang Ma, Xinyi Wang, and William~W. Cohen.
+\newblock Program of thoughts prompting: Disentangling computation from reasoning for numerical reasoning tasks.
+\newblock \emph{Transactions on Machine Learning Research}, 2023.
+
+\bibitem[Cobbe et~al.(2021)]{cobbe2021gsm8k}
+Karl Cobbe, Vineet Kosaraju, Mohammad Bavarian, Mark Chen, Heather Jun, Lukasz Kaiser, Matthias Plappert, Jerry Tworek, Jacob Hilton, Reiichiro Nakano, Christopher Hesse, and John Schulman.
+\newblock Training verifiers to solve math word problems.
+\newblock \emph{arXiv preprint arXiv:2110.14168}, 2021.
+
+\bibitem[Khot et~al.(2023)]{khot2023decomposed}
+Tushar Khot, Harsh Trivedi, Matthew Finlayson, Yao Fu, Kyle Richardson, Peter Clark, and Ashish Sabharwal.
+\newblock Decomposed prompting: A modular approach for solving complex tasks.
+\newblock In \emph{The Eleventh International Conference on Learning Representations}, 2023.
 
 \bibitem[Liu et~al.(2024)]{liu2024lost}
 Nelson~F. Liu, Kevin Lin, John Hewitt, Ashwin Paranjape, Michele Bevilacqua, Fabio Petroni, and Percy Liang.
 \newblock Lost in the middle: How language models use long contexts.
 \newblock \emph{Transactions of the Association for Computational Linguistics}, 12:157--173, 2024.
 
+\bibitem[Ning et~al.(2024)]{ning2024skeleton}
+Xuefei Ning, Zinan Lin, Zixuan Zhou, Zifu Wang, Huazhong Yang, and Yu Wang.
+\newblock Skeleton-of-thought: Prompting {LLMs} for efficient parallel generation.
+\newblock In \emph{The Twelfth International Conference on Learning Representations}, 2024.
+
+\bibitem[{Project Management Institute}(2021)]{pmi2021pmbok}
+{Project Management Institute}.
+\newblock \emph{A Guide to the Project Management Body of Knowledge ({PMBOK} Guide) -- Seventh Edition}.
+\newblock Project Management Institute, Newtown Square, PA, 2021.
+
+\bibitem[Schulhoff et~al.(2024)]{schulhoff2024prompt}
+Sander Schulhoff, Michael Ilie, Nishant Balepur, Konstantine Kahadze, Amanda Liu, Chenglei Si, Yinheng Li, Aayush Gupta, HyoJung Han, Sevien Schulhoff, Pranav~Sandeep Dulepet, Saurav Vidyadhara, Dayeon Ki, Sweta Agrawal, Chau Pham, Gerson Kroiz, Feileen Li, Hudson Tao, Ashay Srivastava, Hevander Da~Costa, Saloni Gupta, Megan~L. Rogers, Inna Goncearenco, Giuseppe Sarli, Igor Galynker, Denis Peskoff, Marine Carpuat, Jules White, Shyam Sundar, and Vishwa Shah.
+\newblock The prompt report: A systematic survey of prompting techniques.
+\newblock \emph{arXiv preprint arXiv:2406.06608}, 2024.
+
 \bibitem[Shinn et~al.(2023)]{shinn2023reflexion}
 Noah Shinn, Federico Cassano, Ashwin Gopinath, Karthik Narasimhan, and Shunyu Yao.
 \newblock Reflexion: Language agents with verbal reinforcement learning.
 \newblock In \emph{Advances in Neural Information Processing Systems}, 2023.
 
-\bibitem[Wang et~al.(2023)]{wang2023plan}
+\bibitem[Suzgun et~al.(2023)]{suzgun2023challenging}
+Mirac Suzgun, Nathan Scales, Nathanael Sch{\"a}rli, Sebastian Gehrmann, Yi Tay, Hyung~Won Chung, Aakanksha Chowdhery, Quoc Le, Ed~Chi, Denny Zhou, and Jason Wei.
+\newblock Challenging {BIG-Bench} tasks and whether chain-of-thought can solve them.
+\newblock In \emph{Findings of the Association for Computational Linguistics: ACL 2023}, pages 13003--13051, 2023.
+
+\bibitem[Wang et~al.(2023a)]{wang2023plan}
 Lei Wang, Wanyu Xu, Yihuai Lan, Zhiqiang Hu, Yunshi Lan, Roy Ka-Wei Lee, and Ee-Peng Lim.
 \newblock Plan-and-solve prompting: Improving zero-shot chain-of-thought reasoning by large language models.
 \newblock In \emph{Proceedings of the 61st Annual Meeting of the Association for Computational Linguistics}, 2023.
+
+\bibitem[Wang et~al.(2023b)]{wang2023selfconsistency}
+Xuezhi Wang, Jason Wei, Dale Schuurmans, Quoc~V. Le, Ed~Chi, Sharan Narang, Aakanksha Chowdhery, and Denny Zhou.
+\newblock Self-consistency improves chain of thought reasoning in language models.
+\newblock In \emph{The Eleventh International Conference on Learning Representations}, 2023.
 
 \bibitem[Wei et~al.(2022)]{wei2022chain}
 Jason Wei, Xuezhi Wang, Dale Schuurmans, Maarten Bosma, Brian Ichter, Fei Xia, Ed~Chi, Quoc~V. Le, and Denny Zhou.
@@ -893,6 +954,16 @@ Shunyu Yao, Jeffrey Zhao, Dian Yu, Nan Du, Izhak Shafran, Karthik Narasimhan, an
 \bibitem[Yao et~al.(2024)]{yao2024tree}
 Shunyu Yao, Dian Yu, Jeffrey Zhao, Izhak Shafran, Tom Griffiths, Yuan Cao, and Karthik Narasimhan.
 \newblock Tree of thoughts: Deliberate problem solving with large language models.
+\newblock In \emph{Advances in Neural Information Processing Systems}, 2024.
+
+\bibitem[Zhou et~al.(2023)]{zhou2023leasttomost}
+Denny Zhou, Nathanael Sch{\"a}rli, Le Hou, Jason Wei, Nathan Scales, Xuezhi Wang, Dale Schuurmans, Claire Cui, Olivier Bousquet, Quoc~V. Le, and Ed~Chi.
+\newblock Least-to-most prompting enables complex reasoning in large language models.
+\newblock In \emph{The Eleventh International Conference on Learning Representations}, 2023.
+
+\bibitem[Zheng et~al.(2024)]{zheng2024judging}
+Lianmin Zheng, Wei-Lin Chiang, Ying Sheng, Siyuan Zhuang, Zhanghao Wu, Yonghao Zhuang, Zi Lin, Zhuohan Li, Dacheng Li, Eric~P. Xing, Hao Zhang, Joseph~E. Gonzalez, and Ion Stoica.
+\newblock Judging {LLM}-as-a-judge with {MT-Bench} and {Chatbot Arena}.
 \newblock In \emph{Advances in Neural Information Processing Systems}, 2024.
 
 \end{thebibliography}
