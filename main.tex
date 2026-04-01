@@ -40,13 +40,13 @@
 % ABSTRACT
 % ============================================================
 \begin{abstract}
-Large Language Models (LLMs) demonstrate remarkable capabilities in multi-step reasoning, yet existing prompting methods such as Chain-of-Thought (CoT) lack explicit mechanisms for managing assumptions, constraints, and validation criteria. We introduce PWBS (Prompt Work Breakdown Structure), a structured planning framework inspired by Work Breakdown Structure (WBS) that organizes LLM prompts into a 6-tuple: Goal, Assumption, Formula, Constraint, Task, and Validation (G-A-F-C-T-V). \textbf{PWBS targets multi-constraint structured-output tasks}---such as travel planning, code debugging, and data analysis---where multiple conditions must be simultaneously satisfied and outputs require complex structure, rather than single-answer problem solving.
+LLM shows excellent ability in multi-level inference, but conventional prompting methods such as CoT do not have devices to explicitly manage assumptions, constraints, and validation criteria. Inspired by the WBS of project management, this work proposes a PWBS framework that structures LLM prompts into six elements: goal, assumption, formula, constraint, task, and verification. \textbf{PWBS targets multi-constraint structured-output tasks}---multi-constrained structured output tasks that require multiple conditions to be satisfied simultaneously, such as travel planning, code debugging, and data analysis, and require outputs of complex structures.
 
-Through experiments on 75 self-designed benchmark tasks across three categories (travel planning, code debugging, logical reasoning) with GPT-4o and GPT-4o-mini, we find that PWBS does not uniformly outperform baselines in overall task success rate---no statistically significant differences were observed ($p > 0.05$). However, component-level ablation reveals that \textbf{Assumption surfacing provides a consistent +4.0\%p improvement on both models}, making it the most robust individual contribution. Furthermore, PWBS components show \textbf{inverse scaling with model capability}: Constraint specification yields +8.0\%p on GPT-4o-mini but $-$2.7\%p on GPT-4o, suggesting that structured prompting is most beneficial for weaker models. Validation on public benchmarks (GSM8K \citep{cobbe2021gsm8k}, BIG-Bench Hard \citep{suzgun2023challenging}) confirms this scope: PWBS underperforms baselines on single-answer tasks ($-$27\%p overall) but achieves the highest score on \texttt{boolean\_expressions} (96.7\%), where logical structure aligns with PWBS components.
+Experiments with GPT-4o and GPT-4o-mini on 75 self-designed benchmarks across three categories of travel planning, code debugging, and logical reasoning show that PWBS did not consistently outperform existing methods in overall task success rates. No statistically significant differences were observed. However, component-specific ablation analysis revealed that Assumption surfacing consistently provided 4.0 percentage point improvement in both models, showing the most stable individual contribution. In addition, the PWBS component shows inverse correlation with model ability. Constraint specification resulted in an 8.0 percentage point improvement in GPT-4o-mini, but rather a 2.7 percentage point drop in GPT-4o. This suggests that structured prompting is most beneficial for weak models. Validation on public benchmarks (GSM8K \citep{cobbe2021gsm8k}, BIG-Bench Hard \citep{suzgun2023challenging}) confirms this scope: PWBS lags behind existing methods by 27 percentage points on a single correct answer task, but achieves the best score of 96.7% on the Boolean expression, where the logical structure fits well with the PWBS component.
 
-Additional contributions include: (1) a \textbf{Reasoning Consistency} improvement of +32.0\%p in code debugging tasks, (2) a \textbf{CSR Transparency Paradox} revealing that PWBS's lower Constraint Satisfaction Rate reflects better constraint detectability rather than worse performance, (3) \textbf{Adaptive Tolerance} for systematic constraint relaxation, and (4) a \textbf{Failure-Driven Evolution} narrative documenting how the framework evolved from 5-tuple to 6-tuple through iterative failure analysis.
+Additional contributions include 32.0 percentage point improvement in inference consistency in code debugging, CSR transparency paradoxes in which PWBS' low constraint satisfaction rate reflects violation detection enhancement rather than performance degradation, adaptive tolerance for systematic constraint relaxation, and a record of the process of evolving from 5 to 6 elements through iterative failure analysis.
 
-These findings reposition PWBS from a monolithic framework to an \textbf{adaptive toolkit} where practitioners should selectively apply components based on model capability and task characteristics.
+These results re-establish PWBS as an adaptive suite of tools rather than a single framework, requiring practitioners to selectively apply components based on model capabilities and task characteristics.
 \end{abstract}
 
 \noindent\textbf{Keywords:} Prompt Engineering, Structured Planning, Work Breakdown Structure, LLM Agents, Chain-of-Thought
@@ -62,55 +62,55 @@ These findings reposition PWBS from a monolithic framework to an \textbf{adaptiv
 
 \subsection{Problem Definition}
 
-Large Language Models (LLMs) have shown remarkable performance across diverse multi-step reasoning tasks. However, structural limitations persist in LLM reasoning: premises of reasoning remain implicit, constraints are not systematically managed, and verification criteria for results are absent. This leads to plausible but incorrect reasoning (hallucination), logical inconsistency between steps, and unstable outputs for identical tasks.
+LLM has shown outstanding performance on a variety of multi-level inference tasks. However, structural limitations still exist in LLM inference. The premise of inference remains implicit, the constraints are not systematically managed, and there is no validation criterion for the results. This leads to plausible but incorrect reasoning: hallucinations, logical inconsistencies between steps, and unstable outputs for the same task.
 
-Chain-of-Thought (CoT) prompting \citep{wei2022chain} significantly improved reasoning quality through the instruction ``let's think step by step.'' However, CoT does not provide explicit structure for what premises each step is based on, what constraints must be satisfied, or how to verify the final result. Plan-and-Solve \citep{wang2023plan} introduced a plan-then-execute structure but similarly lacks explicit mechanisms for managing assumptions and constraints.
+Chain-of-Thought (CoT) prompting \citep{wei2022chain} has significantly improved the quality of inference through the instruction "Let's think step by step". However, CoT does not provide an explicit structure on what premise each step is based on, what constraints should be satisfied, or how to validate the final results. Plan-and-Solve \citep{wang2023plan} introduced a post-planning action structure, but there was no explicit device for managing assumptions and constraints.
 
 \subsection{Research Motivation: Inspiration from WBS}
 
-In project management, Work Breakdown Structure (WBS) is a foundational tool defined by PMBOK \citep{pmi2021pmbok} that hierarchically decomposes project scope into manageable deliverables to prevent omission and duplication. PWBS (Prompt Work Breakdown Structure) draws on two specific WBS principles: (1) \emph{scope completeness}---WBS ensures all deliverables are identified before execution begins, analogous to PWBS's Assumption and Constraint surfacing before reasoning; and (2) \emph{explicit decomposition}---WBS makes implicit project scope visible, analogous to PWBS making implicit reasoning premises visible. We note that the analogy is partial: WBS decomposes \emph{deliverables} hierarchically, while PWBS decomposes \emph{reasoning prerequisites} along semantic dimensions (G-A-F-C-T-V). The 6-tuple structure is closer to a requirements specification than a hierarchical work package tree; the WBS inspiration lies in the \emph{principle} of making implicit scope explicit, not in structural isomorphism.
+In project management, Work Breakdown Structure (WBS) is a foundational tool defined by PMBOK \citep{pmi2021pmbok} that hierarchically breaks down project scope into manageable outputs to avoid omission and duplication. PWBS borrows two principles of WBS. The first is scope completeness, where PWBS surfaces assumptions and constraints before inference, just as WBS identifies all outputs before execution. The second is an explicit decomposition, where just as WBS visualizes the implicit project scope, PWBS visualizes the implicit reasoning premise. This analogy is partial. WBS decomposes the outputs hierarchically, while PWBS decomposes the prerequisites of inference into semantic dimensions. The six-element structure is more of a requirement specification than a hierarchical task package tree. The inspiration for WBS lies not in structural isomorphism, but in the principle of explicitly making implicit scope.
 
 \subsection{Research Questions}
 
-This study is designed to answer the following questions:
+This study intends to answer the following questions.
 
 \begin{itemize}[leftmargin=2em]
-  \item \textbf{RQ1:} Do PWBS's structural components improve LLM reasoning quality? Specifically, which components contribute the most?
-  \item \textbf{RQ2:} How does PWBS's effectiveness vary with model capability?
-  \item \textbf{RQ3:} Does PWBS improve reasoning consistency?
-  \item \textbf{RQ4:} Is the effectiveness maintained when AI automatically generates the 6-tuple structure?
+  \item \textbf{RQ1:} Does the structural component of PWBS improve LLM inference quality? Specifically, which component contributes the most?
+  \item \textbf{RQ2:} How does the effectiveness of PWBS depend on model ability?
+  \item \textbf{RQ3:} Does PWBS improve the consistency of reasoning?
+  \item \textbf{RQ4:} Does AI automatically create a six-element structure still work?
 \end{itemize}
 
 \subsection{Key Findings (Summary)}
 
-Experiments on 75 self-designed benchmark tasks showed that PWBS did not demonstrate statistically significant differences in overall success rate compared to existing methods ($p > 0.05$). However, component-level analysis revealed the following key findings:
+Experiments on 75 tasks of self-designed benchmarks show that PWBS showed no statistically significant difference in overall success rate compared to existing methods. ($p > 0.05$). However, component-level analysis revealed the following key findings.
 
 \begin{enumerate}[leftmargin=2em]
-  \item \textbf{Assumption surfacing has a model-agnostic effect.} Adding only Assumption to CoT yields +4.0\%p improvement on both GPT-4o and GPT-4o-mini. This means explicit articulation of implicit assumptions improves reasoning quality regardless of model capability.
+  \item \textbf{Assumption surfacing has an effect independent of the model.} Adding an assumption to CoT improves by 4.0 percentage points on both GPT-4o and GPT-4o-mini. This implies that explicit representation of implicit assumptions increases inference quality independent of model ability.
 
-  \item \textbf{PWBS's effectiveness inversely correlates with model capability.} Constraint specification shows +8.0\%p effect on GPT-4o-mini but $-$2.7\%p on GPT-4o. Stronger models already implicitly recognize constraints, so explicit structure disperses attention.
+  \item \textbf{PWBS's effectiveness inversely correlates with model capability.} Constraint specification shows an effect of 8.0 percentage points on GPT-4o-mini, but minus 2.7 percentage points on GPT-4o. Strong models already implicitly perceive constraints, so explicit structures distract attention.
 
-  \item \textbf{Component accumulation shows diminishing returns.} Full PWBS (CoT+ACFV) shows lower performance than optimal subsets (CoT+A or CoT+AC). This suggests PWBS should be applied selectively rather than uniformly.
+  \item \textbf{Component accumulation shows diminishing returns.} The overall PWBS, CoT+ACFV, shows lower performance than the optimal subset, CoT+A or CoT+AC. This suggests that PWBS should be applied selectively rather than uniformly.
 
-  \item \textbf{PWBS dramatically improves reasoning consistency in code debugging.} Reasoning Consistency improves from CoT 2.7\% to PWBS 34.7\% (+32.0\%p).
+  \item \textbf{PWBS dramatically improves inference consistency in code debugging.} Inference consistency improved by 32.0 percentage points from 2.7 percent for CoT to 34.7 percent for PWBS.
 
-  \item \textbf{CSR Transparency Paradox:} PWBS's low Constraint Satisfaction Rate (48.7\% vs Direct 84.3\%) is not performance degradation but a result of improved transparency in detecting constraint violations.
+  \item \textbf{CSR Transparency Paradox:} PWBS's low constraint satisfaction rate of 48.7% vs. Direc's 84.3% is not a performance degradation but a result of improved transparency in constraint violation detection.
 \end{enumerate}
 
 \subsection{Contributions}
 
-The contributions of this study are:
+The contributions of this study are as follows.
 
 \begin{enumerate}[leftmargin=2em]
-  \item \textbf{PWBS Framework:} We define a 6-tuple structure (G-A-F-C-T-V) and present a systematic component classification criterion through the 4-stage Invalidation Test.
+  \item \textbf{PWBS Framework:} As a PWBS framework, we define a six-element structure and present a systematic component classification criterion with a four-step invalidation test.
 
-  \item \textbf{Adaptive Mechanisms:} We introduce engineering mechanisms---Adaptive Tolerance, Formula Preserving, Data Preserving, and Constraint Coupling---developed to address failures discovered during experiments.
+  \item \textbf{Adaptive Mechanisms:} As an adaptive mechanism, we introduce an adaptive tolerance, Formula Preserving, data preservation, and Constraint Coupling mechanism developed to address failures discovered during experiments.
 
-  \item \textbf{Component-level Effect Analysis:} We propose an ablation design that measures each component's independent and combinatorial contribution on top of CoT, rather than comparing the entire framework.
+  \item \textbf{Component-level Effect Analysis:} As a component-level effect analysis, we propose an ablation design that measures the independent and combinatorial contributions of each component on CoT instead of comparing the entire framework.
 
-  \item \textbf{Transparent Record of Failure-Driven Evolution:} We document PWBS's evolution from 5-tuple to 6-tuple with failure cases, enhancing reproducibility and credibility.
+  \item \textbf{Transparent Record of Failure-Driven Evolution:} As a transparent record of failure-based evolution, we document the evolution of PWBS from five to six elements with failure cases to increase reproducibility and reliability.
 
-  \item \textbf{Repositioning as Adaptive Toolkit:} We propose PWBS as an adaptive toolkit for selective component application based on model capability and task characteristics.
+  \item \textbf{Repositioning as Adaptive Toolkit:} As a re-establishment as an adaptive toolkit, we propose PWBS as an adaptive toolkit for selective component application based on model capabilities and task characteristics.
 \end{enumerate}
 
 % ============================================================
@@ -120,25 +120,25 @@ The contributions of this study are:
 
 \subsection{Prompting Methodologies}
 
-\textbf{Chain-of-Thought (CoT).} \citet{wei2022chain} demonstrated that the simple instruction ``Let's think step by step'' can significantly improve LLM multi-step reasoning performance. CoT generates explicit intermediate reasoning steps, guiding LLMs to solve complex problems incrementally. However, CoT lacks structure for the premises, constraints, and verification of each step, which can lead to logical inconsistency between steps.
+\textbf{Chain-of-Thought (CoT).} \citet{wei2022chain} showed that a simple instruction "Let's think step by step" can significantly improve the multi-step inference performance of LLM. CoT generates explicit intermediate inference steps to guide LLM to gradually solve complex problems. However, CoT lacks the presupposition, constraints, and structure for validation of each stage, which can lead to logical inconsistencies between stages.
 
-\textbf{Self-Consistency.} \citet{wang2023selfconsistency} improved CoT by sampling multiple reasoning paths and selecting the most consistent answer via majority voting. Our Reasoning Consistency metric is related but distinct: Self-Consistency is a \emph{decoding strategy} that aggregates diverse reasoning paths at inference time, whereas our RC metric \emph{measures} the structural stability that a prompting framework induces across independent runs. PWBS's consistency improvement (+32.0\%p in code debugging) comes from structural scaffolding that constrains reasoning paths, not from output aggregation.
+\textbf{Self-Consistency.} \citet{wang2023selfconsistency} improved CoT by sampling multiple inference paths and selecting the most consistent answer with majority vote. The inference consistency indicators in this study are relevant but distinct. Self-Consistency is a decoding strategy that aggregates various inference paths at the time of inference, while RC metrics in this study measure the structural stability induced by the promping framework in independent execution. In code debugging, which is a consistency improvement in PWBS, 32.0 percentage points come from structural scaffolding that constrains inference paths rather than output aggregation.
 
-\textbf{Plan-and-Solve.} \citet{wang2023plan} proposed a two-phase approach: ``First understand the problem and devise a plan, then solve step by step.'' This introduces a higher-level planning structure beyond CoT's simple step enumeration. However, Plan-and-Solve also lacks mechanisms for explicit assumption management, systematic constraint handling, and result verification.
+\textbf{Plan-and-Solve.} \citet{wang2023plan} proposed a two-step approach to understanding the problem first, planning it, and then solving it step by step. This introduces a higher-level planning structure that goes beyond simple step-by-step listing of CoT. However, Plan-and-Solve also lacks explicit Assumption management, systematic constraint handling, and result validation devices.
 
-\textbf{Task Decomposition Approaches.} Least-to-Most prompting \citep{zhou2023leasttomost} decomposes complex problems into progressively easier subproblems, while Decomposed Prompting \citep{khot2023decomposed} delegates subtasks to specialized sub-prompts. PWBS shares the decomposition motivation but differs in two key ways: (1) PWBS decomposes along \emph{semantic dimensions} (assumptions, constraints, formulas) rather than problem difficulty or subtask specialization, and (2) PWBS's Constraint Coupling mechanism (Section~3.7) explicitly manages inter-subtask dependencies, addressing over-decomposition failures that naive decomposition approaches do not handle.
+\textbf{Task Decomposition Approaches.} Least-to-Most prompting \citep{zhou2023leasttomost} progressively decomposes complex problems into easy subproblems, and Decomposed Prompting delegates subtasks to specialized subprompts. Although PWBS shares a decomposition motivation, there are two key differences. First, PWBS decomposes according to assumptions, constraints, and formulas, which are semantic dimensions rather than problem difficulty or sub-task specialization. Second, the constrained coupling mechanism of PWBS explicitly manages dependencies among sub-tasks, addressing over-decomposition failures that simple decomposition approaches fail to handle.
 
-\textbf{Tree of Thoughts (ToT).} \citet{yao2024tree} proposed exploring reasoning paths in a tree structure, overcoming CoT's limitation of being confined to a single path. However, ToT focuses on search efficiency and does not address assumption or constraint management at each node.
+\textbf{Tree of Thoughts (ToT).} \citet{yao2024tree} proposed a way to overcome the limitation of CoT being trapped in a single path by exploring inference paths into tree structures. However, ToT focuses on exploration efficiency, and does not address assumptions or constraint management at each node.
 
-\textbf{ReAct and Reflexion.} ReAct \citep{yao2023react} proposed an agent paradigm alternating reasoning and action, while Reflexion \citep{shinn2023reflexion} proposed iterative improvement through self-reflection. These share similar motivation to PWBS's Validation in utilizing execution feedback, but do not include assumption surfacing or structural constraint management.
+\textbf{ReAct and Reflexion.} ReAct \citep{yao2023react} and Reflexion, , while Reflexion \citep{shinn2023reflexion} proposed iterative improvements through self-reflection. They share a similar motivation to the verification of PWBS in that they utilize execution feedback, but do not include Assumption surfacing or structural constraint management.
 
-\textbf{Program of Thoughts (PoT).} \citet{chen2023program} disentangles computation from reasoning by generating executable programs. PWBS's Formula component serves a related purpose---preserving computational procedures verbatim---but operates at the prompt-structuring level rather than requiring code generation, making it applicable to non-numerical tasks such as travel planning.
+\textbf{Program of Thoughts (PoT).} \citet{chen2023program} created a executable program to separate the computation from inference. Formal components of PWBS serve the relevant purpose and preserve the computational procedure as it is in the original text, but instead of requiring code generation, they operate at the level of prompt structure and are also applicable to non-numerical tasks such as travel planning.
 
 \subsection{Structured Prompting}
 
-Recent research has attempted to improve LLM performance by adding structure to prompts. \citet{schulhoff2024prompt} provide a comprehensive survey of prompting techniques, documenting the growing evidence that structural elements in prompts improve LLM performance. Skeleton-of-Thought \citep{ning2024skeleton} structures outputs via skeleton-then-expansion for efficient parallel generation, focusing on output organization rather than input premises.
+Recent research has attempted to improve LLM performance by adding structures to prompts. \citet{schulhoff2024prompt} provide a comprehensive investigation of the prompting technique, and note that there is increasing evidence that structural elements of prompts improve LLM performance. Skeleton-of-Thought \citep{ning2024skeleton} focuses on efficient parallel generation by structuring the output in a post-frame expansion manner, and focuses on the output organization rather than the input premise.
 
-PWBS extends this structuring approach but differentiates itself by providing \emph{semantic} structuring based on engineering principles (WBS) rather than mere formatting or output organization. Specifically, PWBS structures the \emph{input} premises (assumptions, constraints, formulas) that govern reasoning, complementing methods that structure the reasoning \emph{process} (CoT) or \emph{output} (Skeleton-of-Thought).
+PWBS extends this structuring approach, but it is differentiated by providing semantic structuring based on WBS, an engineering principle rather than simple formalization or output organization. Specifically, PWBS structures assumptions, constraints, and formulas, the input premises that govern inference, complementing either CoT structuring the inference process or Skeleton-of-Thought structuring the output.
 
 \subsection{Comparison with Existing Methods}
 
@@ -161,11 +161,11 @@ Task rationale (why) & -- & -- & -- & \checkmark \\
 \end{tabular}
 \end{table}
 
-Existing methods focus on ``how to reason,'' while PWBS extends to ``on what premises, within what constraints, and how to verify.'' However, our experiments show this extension does not always translate to performance improvement---selective application based on model capability and task characteristics is key.
+Existing methods focus on "how to infer", but PWBS extends to "on what premise, under what constraints, how to verify". However, experimental results show that this extension does not always lead to performance improvement, and selective application based on model capabilities and task characteristics is key.
 
 \subsection{Multi-call Architecture and Information Preservation}
 
-Multi-call architectures are increasing in LLM-based agent systems. However, inter-call information loss has been relatively underexplored. PWBS's Data Preserving and Formula Preserving mechanisms provide concrete solutions to this problem, applicable beyond PWBS to general multi-call prompting systems.
+Multi-call architectures are increasing in LLM-based agent systems. However, inter-call information loss has been relatively less explored. The data preservation and Formula Preserving mechanisms of PWBS provide a concrete solution to this problem, and are applicable to general multi-call prompting systems beyond PWBS.
 
 % ============================================================
 % 3. PWBS FRAMEWORK
@@ -174,9 +174,9 @@ Multi-call architectures are increasing in LLM-based agent systems. However, int
 
 \subsection{Overview}
 
-PWBS is a structural planning framework that applies WBS principles from software engineering and project management to LLM agent prompt design. Just as WBS hierarchically decomposes project scope to prevent omission and duplication, PWBS decomposes tasks into explicit components to ensure reasoning completeness and consistency.
+PWBS is a structural planning framework that applies the WBS principles of software engineering and project management to LLM agent prompt design. Just as WBS breaks down project scope hierarchically to avoid omission and duplication, PWBS breaks down tasks into explicit components to ensure the integrity and consistency of inference.
 
-\textbf{PWBS does not replace CoT but functions as a meta-structure that strengthens CoT by adding a structuring layer on top of it.}
+\textbf{PWBS does not replace CoT and functions as a meta-structure that reinforces by adding a structured layer on top of CoT.}
 
 \subsection{Formal Definition}
 
@@ -187,21 +187,21 @@ PWBS is formally defined as a 6-tuple:
 
 \noindent where each component is defined as follows:
 
-\textbf{G (Goal):} Clearly describes the ultimate objective. Must be measurable and unambiguous, including original data/code.
+\textbf{G (Goal):} G is a goal, clearly describing the end purpose. It should be measurable and unambiguous, and contain original data and code.
 
-\textbf{A (Assumption):} Set of premises the LLM must assume to be true. This is PWBS's core contribution---the most overlooked element in existing prompting methods. LLMs tend to create implicit assumptions, and when unstated, these become primary sources of hallucination and reasoning errors. Experiments confirmed Assumption surfacing as the only component showing consistent +4.0\%p improvement regardless of model capability.
+\textbf{A (Assumption):} A is a set of assumptions that LLM must be assumed to be true. This is a key contribution of PWBS, which is the most overlooked element in existing prompting methods. LLM tends to make implicit assumptions, and if this is not specified, it is the main cause of hallucinations and inference errors. Experimental results show that Assumption surfacing is the only component showing consistent 4.0 percentage point improvement regardless of model ability.
 
-\textbf{F (Formula):} Preserves calculation formulas verbatim from the task. Distinguished from Constraints---Constraints are boundary conditions judging solution eligibility (e.g., ``budget $\leq$ \$5,000''), while Formulas are calculation rules that must be applied exactly (e.g., ``score = exam$\times$0.4 + interview$\times$0.4 + service/10$\times$0.1 + cert$\times$5$\times$0.1''). This component was introduced after pilot experiments revealed formula abstraction failures (see Section~\ref{sec:evolution}, Phase~3).
+\textbf{F (Formula):} F is a formula that preserves the calculation formula of the task as it is in the original text. Distinguished from the constraint, the constraint is a boundary condition that judges the eligibility of the solution, and the formula is a computational rule that must be applied exactly. This component was introduced after pilot experiments revealed Formula abstraction failures. (see Section~\ref{sec:evolution}, Phase~3).
 
-\textbf{C (Constraint):} Conditions that must be satisfied during task execution. Includes time limits, resource limits, format requirements, and prohibitions. However, experiments show Constraint specification is only effective for weaker models (+8.0\%p on GPT-4o-mini) and can be counterproductive for stronger models ($-$2.7\%p on GPT-4o).
+\textbf{C (Constraint):} C is a constraint and is a condition that must be satisfied during task execution. Includes time limits, resource restrictions, format requirements, and prohibitions. However, experimental results show that constraint specification is only effective in weak models and can be rather counterproductive in strong models. ($-$2.7\%p on GPT-4o).
 
-\textbf{T (Task):} Ordered set of subtasks. Each Task has three sub-elements: \textit{why} (rationale), \textit{method} (specific approach), \textit{output} (expected deliverable), plus \textit{formula} and \textit{depends\_on} fields.
+\textbf{T (Task):} T is a task, an ordered set of sub-tasks. Each task has three sub-elements: reason, method, and expected output, as well as formula and dependence fields.
 
-\textbf{V (Validation):} Set of criteria for verifying whether results achieve the goal. Systematically checks Goal achievement, Constraint compliance, Formula accuracy, and Assumption maintenance.
+\textbf{V (Validation):} V is a verification, a set of criteria that verifies that the result has achieved its goal. Systematically checks goal achievement, constraint compliance, Formula accuracy, and Assumption maintenance.
 
 \subsection{Component Classification: 4-Stage Invalidation Test}
 
-PWBS presents a systematic criterion for classifying conditions into Goal, Assumption, Formula, and Constraint. The key question is ``If this condition changes or disappears, what is invalidated?''
+PWBS presents a systematic criterion for classifying conditions into goals, assumptions, formulas, and constraints. The key question is, "If this condition changes or disappears, what is invalidated?"
 
 \begin{table}[h]
 \centering
@@ -219,23 +219,23 @@ Solution becomes unsuitable & Solution eligibility & \textsc{Constraint} \\
 \end{tabular}
 \end{table}
 
-\textbf{Examples.} In code debugging, \texttt{buggy\_code} changes $\rightarrow$ different task $\rightarrow$ \textsc{Goal}; ``input is int type'' false $\rightarrow$ analysis invalid $\rightarrow$ \textsc{Assumption}; ``existing tests pass'' violated $\rightarrow$ answer unsuitable $\rightarrow$ \textsc{Constraint}. In logical reasoning with formulas, ``score = exam$\times$0.4 + \ldots'' formula changes $\rightarrow$ calculation results differ $\rightarrow$ \textsc{Formula}.
+\textbf{Examples.} As an example, if the bug code changes in code debugging, it is a goal because it becomes a different task, and if the "int type" is false, it is an assumption because the analysis is invalid, and if the "existent test pass" is violated, the answer is inappropriate, so it is a constraint. It is a formula because the calculation results change when the formula changes in logical reasoning.
 
-\textbf{Dual Registration.} The same condition can appear in both \textsc{Goal} (directionality) and \textsc{Constraint} (verifiable condition). Based on the engineering principle that excessive explicitness is safer than omission.
+\textbf{Dual Registration.} Double registration is possible, so the same conditions can appear in both the direction of the goal and the verifiable conditions of the constraints. It is based on the engineering principle that excessive explicitness is safer than omission.
 
 \subsection{Component Relationships}
 
-The six components form interdependent relationships: Assumptions are preconditions for Tasks; Formulas are calculation rules for Tasks; Constraints are boundary conditions for Tasks; Validation references all of Goal, Assumption, Formula, and Constraint.
+The six components form an interdependent relationship. Assumptions are prerequisites for tasks, formulas are computational rules of tasks, constraints are boundary conditions for tasks, and validations refer to objectives, assumptions, formulas, and constraints.
 
 \subsection{Design Rationale}
 
 \subsubsection{Why Separate Assumption and Constraint from Goal?}
 
-Three structural advantages: (1) \textbf{Explicit Attention Allocation}---separated elements become independent checkpoints for LLM attention, addressing lost-in-the-middle phenomena \citep{liu2024lost}; (2) \textbf{Change Impact Tracing}---enables immediate tracking of which Tasks are affected by Assumption changes; (3) \textbf{Multi-dimensional Validation}---enables independent verification of Goal, Assumption, Formula, and Constraint compliance.
+There are three structural advantages that separate assumptions and constraints from their goals. (1) \textbf{Explicit Attention Allocation}---the separated elements become independent checkpoints for LLM attention, addressing the phenomenon of intermediate information loss. \citep{liu2024lost}; (2) \textbf{Change Impact Tracing}---it is possible to immediately track which tasks are affected by Assumption changes.; (3) \textbf{Multi-dimensional Validation}---independent verification of objectives, assumptions, formulas, and constraints compliance is possible.
 
 \subsubsection{Positioning: CoT Enhancement Framework}
 
-PWBS does not replace CoT. It strengthens CoT by adding a structuring layer:
+PWBS does not replace CoT, and it is reinforced by adding a structured layer.
 
 \begin{itemize}[leftmargin=2em]
   \item CoT: ``Think step by step''
@@ -246,13 +246,13 @@ PWBS does not replace CoT. It strengthens CoT by adding a structuring layer:
   \item CoT + ACFV (PWBS): All combined
 \end{itemize}
 
-Experiments confirmed that selective application of components matching task and model is more effective than applying all components.
+As a result of the experiment, it was confirmed that it is more effective to selectively apply components that fit the task and model than to apply all components.
 
 \subsection{Adaptive Tolerance}
 
-A paradox was observed in pilot experiments: PWBS, which better recognizes constraints, showed lower success rates. In travel planning, PWBS's initial success rate was only 20\%. This ``Constraint Rigidity Paradox'' occurs because PWBS faithfully attempts to meet strict constraints, failing to find feasible solutions, while Direct/CoT loosely interprets constraints and succeeds through uncontrolled relaxation.
+Paradoxes were observed in pilot experiments. PWBS, which better recognizes the constraints, showed a rather lower success rate. The initial success rate of PWBS in travel planning was only 20 percent. This Constraint Rigidity paradox arises because PWBS tries to satisfy strict constraints faithfully and finds no viable solutions, while Direct or CoT succeeds through uncontrolled relaxation by loosely interpreting constraints.
 
-Adaptive Tolerance resolves this with ``strict first, relax only on failure'':
+Adaptive tolerances address this as "strictly at first, only mitigated in case of failure."
 
 \begin{table}[h]
 \centering
@@ -270,7 +270,7 @@ Step 3 & +30\% relaxed (\$6,500) & Final result \\
 \end{tabular}
 \end{table}
 
-Relaxation direction is automatically determined by constraint type:
+The direction of relaxation is automatically determined by the type of constraint.
 
 \begin{table}[h]
 \centering
@@ -289,9 +289,9 @@ Relaxation direction is automatically determined by constraint type:
 
 \subsection{Constraint Coupling Classification}
 
-Another unexpected finding: ``Structuring is not always beneficial.'' In travel planning, fine-grained Task decomposition caused success rate to drop from 100\% to 60\%.
+There was another unexpected discovery. "Structuring is not always beneficial." The success rate dropped from 100 percent to 60 percent due to detailed work decomposition in travel planning.
 
-The cause was interdependent constraints. Budget constraints are the sum of accommodation, food, and transport; daily travel time depends on visit order. Decomposing these into separate Tasks prevents global optimization.
+The cause was interdependent constraints. The budget constraint is the sum of accommodation, meals, and transportation, and the daily travel time depends on the order of visit. Breaking it down into separate tasks makes global optimization impossible.
 
 \begin{table}[h]
 \centering
@@ -315,7 +315,7 @@ Independent & Independent constraints & Default decomposition & -- \\
 
 \subsection{PWBS Prompt Template}
 
-The PWBS template structures prompts as follows:
+The PWBS template structures the prompt as follows.
 
 \begin{Verbatim}[frame=single,fontsize=\small]
 [GOAL]
@@ -350,16 +350,16 @@ The PWBS template structures prompts as follows:
 - V4: Assumption maintenance verification
 \end{Verbatim}
 
-\textbf{Design principles:} (1) \textbf{Ordering}---G$\rightarrow$A$\rightarrow$F$\rightarrow$C$\rightarrow$T$\rightarrow$V reflects natural reasoning flow; (2) \textbf{Dependency Declaration}---each Task explicitly references its dependencies; (3) \textbf{Self-Documentation}---requiring ``impact if false'' for Assumptions and ``why'' for Tasks.
+\textbf{Design principles:} There are three design principles. (1) \textbf{Ordering}---the deployment from G to A, F, C, T, and V reflects a natural flow of inference.; (2) \textbf{Dependency Declaration}---each task explicitly refers to dependency.; (3) \textbf{Self-Documentation}---it requires "impact if false" on the assumption and "reason" on the work.
 
 \subsection{Agent Architecture}
 
-Three modules comprise the PWBS agent: \textbf{Planner} (fills PWBS template, surfaces implicit assumptions), \textbf{Executor} (executes Tasks with dependencies as context), \textbf{Validator} (verifies outputs on four dimensions: Goal, Assumption, Formula, Constraint).
+The PWBS agent consists of three modules. \textbf{Planner} (fills the PWBS template and surfaces the implicit assumption.), \textbf{Executor} (executes the task with dependency as the context.), \textbf{Validator} (checks the output in four dimensions: objective, assumption, formula, and constraint.).
 
 \subsection{Execution Loop}
 
 \begin{enumerate}[leftmargin=2em]
-  \item \textbf{Phase 1: Planning}---Planner generates 6-tuple
+  \item \textbf{Phase 1: Planning}---In the first stage of the plan, the planner creates six elements.
   \item \textbf{Phase 2: Stepwise execution} with immediate validation
   \item \textbf{Phase 3: Integrated validation} at Goal level
   \item \textbf{Phase 4: Feedback loop}---type-specific retry on failure
@@ -367,26 +367,26 @@ Three modules comprise the PWBS agent: \textbf{Planner} (fills PWBS template, su
 
 \subsection{Integration with CoT and Existing Methods}
 
-PWBS serves as a meta-structure that integrates with existing methods. CoT can be used within each Task's method; Tree of Thoughts can be applied for branching. PWBS provides the frame specifying under what premises and constraints these techniques operate.
+PWBS serves as a meta-structure that is integrated with existing methods. CoT can be used within the method of each task, and Tree of Thought can be applied to branches. PWBS provides a frame to specify what premises and constraints these techniques operate under.
 
 \subsection{AI Planner Module (PWBS Auto)}
 
-To verify PWBS's practicality, an AI Planner module automatically converts natural language task descriptions into the 6-tuple structure.
+To verify the practicality of PWBS, the AI planner module automatically converts the natural language task description into a six-element structure.
 
 \begin{itemize}[leftmargin=2em]
-  \item \textbf{Exp 1 (PWBS manual):} Human expert writes 6-tuple $\rightarrow$ 1 call. Verifies structural effect.
-  \item \textbf{Exp 2 (PWBS auto):} AI Planner generates 6-tuple (1 call) $\rightarrow$ Executor (1 call) = 2 calls. Verifies automation feasibility.
+  \item \textbf{Exp 1 (PWBS manual):} In PWBS manual, experiment 1, experts write 6 elements and call them once, and verify their structural effectiveness.
+  \item \textbf{Exp 2 (PWBS auto):} In experiment 2, PWBS Auto, the AI planner generates six elements (one call) and executes the executor (one call) with two calls to validate the feasibility of automation.
 \end{itemize}
 
-Both experiments together verify both structural effectiveness and automation practicality.
+Both experiments are performed to verify both structural effects and automation practicality together.
 
 \subsubsection{Data Preserving}
 
-AI Planner omitted original data tables in 2-call architecture, causing Executor to hallucinate data. Solution: explicit instruction to include original data in Goal section, plus automatic verification of key numerical values.
+As for Data Preserving, the AI planner omitted the original data table from the two-call structure, so the executor fabricated the data. The solution is an explicit instruction to include the original data in the target section and an automatic verification of the core figures.
 
 \subsubsection{Formula Preserving}
 
-AI Planner abstracted formulas to natural language, losing coefficients. Solution: automatic extraction of formula patterns from original input, post-processing to inject original formulas when coefficients are missing.
+As for the Formula Preserving, the AI planner abstracted the formula into natural language and lost the coefficient. The solution is post-processing, which automatically extracts the formula pattern from the original input, and injects the original formula if the coefficients are missing.
 
 \subsection{Baselines}
 
@@ -425,7 +425,7 @@ Step Validity Rate (SVR) & Valid reasoning step ratio & GPT-4o judge \\
 \end{tabular}
 \end{table}
 
-Statistical testing: paired bootstrap test ($p < 0.05$), Cohen's $d$, 95\% CI via bootstrap.
+The statistical test is a corresponding bootstrap test, using a significance level of 0.05, the effect size is reported by Cohen's d, and the confidence interval is reported by bootstrap 95% CI.
 
 % ============================================================
 % 5. EXPERIMENTS
@@ -434,17 +434,17 @@ Statistical testing: paired bootstrap test ($p < 0.05$), Cohen's $d$, 95\% CI vi
 
 \subsection{Benchmark}
 
-75 self-designed benchmark tasks in 3 categories:
+75 tasks of self-designed benchmarks were organized into three categories.
 
 \begin{itemize}[leftmargin=2em]
-  \item \textbf{Category A---Travel Planning (25):} ``N-day trip to [city]. Budget X, daily travel time $\leq$ Y hours, [dietary/companion restrictions]''
-  \item \textbf{Category B---Code Debugging (25):} Buggy Python code + error description + ``Fix without breaking existing tests''
-  \item \textbf{Category C---Logical Reasoning (25):} Data + analysis request + explicit criteria (e.g., ``Recommend only if debt ratio $\leq$ 200\% and ROE $\geq$ 10\%'')
+  \item \textbf{Category A---Travel Planning (25):} Category A is 25 travel plans, with budget X, daily travel time of Y hours or less, and dietary and accompanying restrictions for travel to a specific city for N days.
+  \item \textbf{Category B---Code Debugging (25):} Category B is 25 code debugging, a form of "fixing existing tests without breaking them" in buggy Python code and error descriptions.
+  \item \textbf{Category C---Logical Reasoning (25):} Category C is 25 logical deductions, in which data and analysis requests have explicit criteria such as "recommendation only if the debt ratio is 200% or less and ROE is 10% or higher."
 \end{itemize}
 
 \subsection{Experimental Setup}
 
-All experiments on GPT-4o and GPT-4o-mini. Temperature = 0.0 (0.7 for consistency). Same model for Planner and Executor.
+All experiments were conducted on GPT-4o and GPT-4o-mini. The base temperature was 0.0 and 0.7 was used for consistency measurements. The same model was used for the planner and the executor.
 
 \begin{table}[h]
 \centering
@@ -486,7 +486,7 @@ PWBS (manual) & 82.7\% & [76.7, 88.7] & 150 \\
 \end{tabular}
 \end{table}
 
-\textbf{Key result: No statistically significant differences between methods} (all pairwise $p > 0.05$).
+\textbf{Key result: As a key result, there was no statistically significant difference between methods.} (all pairwise $p > 0.05$).
 
 \begin{table}[h]
 \centering
@@ -506,7 +506,7 @@ PWBS vs PWBS auto & $-$1.3\%p & 0.683 & $-$0.036 & No \\
 
 \subsubsection{Interpretation}
 
-The absence of significant SR differences rejects the initial hypothesis that ``PWBS significantly outperforms all methods.'' However, this does not mean PWBS has no value---component-level and consistency analyses reveal differential contributions.
+The absence of significant differences in success rates rejects the initial hypothesis that "PWBS significantly outperforms all methods." However, this does not mean that PWBS has no value, and component-level and consistency analyses reveal discriminatory contributions.
 
 \subsection{Adaptive Tolerance Results}
 
@@ -525,7 +525,7 @@ Logic & Majority & Few & -- & -- \\
 \end{tabular}
 \end{table}
 
-Code debugging required no tolerance relaxation, confirming discrete constraints are correctly excluded.
+Code debugging did not require any tolerance mitigation at all, confirming that discrete constraints were correctly excluded.
 
 \subsection{Ablation Study: CoT + PWBS Components}
 
@@ -573,21 +573,21 @@ CoT + ACFV & 84\% & 80\% & 92\% & 85.3\% & +5.3 \\
 
 \subsubsection{Key Findings}
 
-\textbf{Note:} The following ablation differences are \emph{directional observations}, not statistically confirmed effects. With $n=25$ per category, formal significance testing is underpowered; we report these patterns to motivate future investigation with larger samples.\footnote{Paired bootstrap tests on overall ablation differences ($n=75$) yield $p=0.12$ for CoT+A vs CoT and $p=0.31$ for CoT+C vs CoT, confirming that these differences do not reach conventional significance thresholds. We report them as suggestive patterns warranting replication.}
+\textbf{Note:} For reference, the following ablation differences are directional observations, not statistically confirmed effects. Twenty-five by category lack power in the formal significance test, and these patterns are reported for follow-up studies with larger samples.\footnote{Paired bootstrap tests on overall ablation differences ($n=75$) yield $p=0.12$ for CoT+A vs CoT and $p=0.31$ for CoT+C vs CoT, confirming that these differences do not reach conventional significance thresholds. We report them as suggestive patterns warranting replication.}
 
-\textbf{Finding 1: Assumption surfacing has a model-agnostic effect.} CoT+A yields exactly +4.0\%p on both models---the most stable individual component.
+\textbf{Finding 1: With discovery 1, the Assumption surfacing shows model-independent effects.} CoT+A is the most stable individual component, achieving exactly 4.0 percentage points in both models.
 
-\textbf{Finding 2: Constraint specification inversely correlates with model strength.} +8.0\%p on mini, $-$2.7\%p on 4o. Stronger models already implicitly recognize constraints.
+\textbf{Finding 2: As discovery 2, the constraint specification is inversely correlated with the model strength.} 8.0 percentage points in GPT-4o-mini and 2.7 percentage points in GPT-4o. Strong models already implicitly recognize constraints.
 
-\textbf{Finding 3: Component accumulation shows diminishing returns.} CoT+ACFV underperforms CoT+A (4o) and CoT+AC (mini).
+\textbf{Finding 3: Accumulation of components shows diminishing returns.} CoT+ACFV shows lower performance than CoT+A at GPT-4o and CoT+AC at GPT-4o-mini.
 
-\textbf{Finding 4: Optimal configuration is task+model dependent.} Strong model $\rightarrow$ CoT+A. Weak model $\rightarrow$ CoT+A+C. Formula tasks $\rightarrow$ add F.
+\textbf{Finding 4: As discovery 4, the optimal configuration is task- and model-dependent.} We add CoT+A for strong models, CoT+A+C for weak models, and F for formal tasks.
 
 \subsection{Reasoning Consistency Analysis}
 
-75 tasks $\times$ 2 methods $\times$ 3 repetitions = 450 calls (temperature=0.7, GPT-4o).
+We performed 450 calls with 75 tasks, 2 methods, and 3 iterations, and used GPT-4o at a temperature of 0.7.
 
-\textbf{RC Calculation.} For each task, we run 3 independent trials and compute pairwise agreement. For code debugging and logical reasoning tasks with deterministic answers, RC is the proportion of trial pairs producing identical final answers (exact match after normalization). For travel planning tasks with open-ended outputs, RC is the average pairwise semantic similarity (cosine similarity of GPT-4o embeddings) among the 3 outputs, thresholded at 0.9 for ``agreement.'' Perfect Agreement (3/3) means all 3 trials agree. This metric differs from Self-Consistency \citep{wang2023selfconsistency}, which aggregates diverse paths for better answers; our RC instead \emph{measures} whether a prompting method induces stable reasoning paths.
+\textbf{RC Calculation.} As for RC calculations, we perform three independent trials on each task and calculate pairwise concordance. In code debugging and logical reasoning where the correct answer is crucial, RC is the percentage of trial pairs that give the same final answer after normalization. In the travel plan of open outputs, RC was the average pairwise semantic similarity between the three outputs, and 0.9 was used as the matching threshold. Complete agreement means that all three trials are consistent. This metric is different from Self-Consistency, which aggregates various paths for better answers, and measures whether the promping method induces stable inference paths.
 
 \begin{table}[h]
 \centering
@@ -618,7 +618,7 @@ Logical Reasoning & 94.7\% & 92.0\% & $-$2.7\%p \\
 \end{tabular}
 \end{table}
 
-\textbf{Interpretation.} PWBS dramatically improves consistency in code debugging (+32.0\%p) because its structural scaffolding (Assumption, Constraint, Task structure) constrains reasoning paths, reducing answer variability even at high temperature.
+\textbf{Interpretation.} Interpreted, PWBS dramatically improves consistency in code debugging. This is because the assumptions, constraints, and work structures, which are structural scaffolding, constrain the inference path, reducing the variability of answers even at high temperatures.
 
 \subsection{CSR Transparency Paradox}
 
@@ -639,11 +639,11 @@ PWBS auto & 149 & 75 (34\%) & 45 & \textbf{69.8\%} \\
 \end{tabular}
 \end{table}
 
-\textbf{Cause: Measurement Bias.} Direct/CoT process constraints implicitly, omitting values from responses $\rightarrow$ parser cannot judge $\rightarrow$ excluded from CSR denominator $\rightarrow$ CSR overestimated. PWBS reports constraints explicitly $\rightarrow$ violations detectable $\rightarrow$ included in denominator $\rightarrow$ accurate measurement.
+\textbf{Cause: Measurement Bias.} Direct and CoT implicitly deal with constraints and omit values from responses, so the parser cannot determine, so it is excluded from the CSR denominator and CSR is overestimated. Since PWBS explicitly reports constraints, violations are detectable and included in the denominator for accurate measurements.
 
-\textbf{PWBS's low CSR is not performance degradation but improved transparency.} High CSR in other methods reflects ``can't see violations'' rather than ``no violations.'' We acknowledge this interpretation requires further validation: a human annotation study measuring true constraint violation rates across all methods would be needed to confirm that skipped constraints in Direct/CoT are violated at comparable rates (see Limitations, Section~6.5).
+\textbf{The low CSR of PWBS is not a performance degradation but an improvement in transparency.} The high CSR of other methods reflects "I can't see violations" rather than "I don't see any violations." This interpretation acknowledges that further verification is required. Human annotation studies measuring the true rate of constraints violation in all methods are needed to fully support this argument. (see Limitations, Section~6.5).
 
-Proposed corrections: \textbf{Adjusted CSR} = Satisfied / Total Constraints (including skips); \textbf{Detectability Rate} = Checked / Total.
+Proposed corrections: CSR adjusted as a correction measure is the satisfaction ratio to the total constraint including skipped, and the detectability ratio is the confirmed ratio to the total.
 
 \subsection{Model Comparison Summary}
 
@@ -664,11 +664,11 @@ Implication & Minimize structure & Add structure \\
 \end{tabular}
 \end{table}
 
-PWBS's effectiveness inversely correlates with model capability, suggesting its essential mechanism is explicitly providing what stronger models already do implicitly.
+The effectiveness of PWBS is inversely correlated with model ability, suggesting that the core mechanism is to explicitly provide what a strong model already performs implicitly.
 
 \subsection{Public Benchmark Validation (GSM8K + BBH)}
 
-To address potential cherry-picking concerns with self-designed benchmarks, we extended experiments to two established public benchmarks: GSM8K \citep{cobbe2021gsm8k} and BIG-Bench Hard \citep{suzgun2023challenging}. Based on our self-designed benchmark findings that PWBS is most effective for multi-constraint structured outputs, we \emph{hypothesized a priori} that PWBS would show limited benefit on single-answer benchmarks, while tasks with structural alignment to PWBS components (e.g., logical operations mapping to Formula/Constraint) would benefit.
+To address the bias concerns of self-designed benchmarks, we extended our experiment with two public benchmarks, GSM8K and BIG-Bench Hard. Based on our own benchmark results, we hypothesized beforehand that PWBS would show limited advantages on a single correct answer benchmark, and expected tasks structurally aligned with PWBS components to benefit.
 
 \subsubsection{Benchmark Selection}
 
@@ -686,7 +686,7 @@ BBH & 105 & Multi-step reasoning & Structural effect on reasoning \\
 \end{tabular}
 \end{table}
 
-BBH subtasks: \texttt{boolean\_expressions} (30), \texttt{causal\_judgement} (25), \texttt{date\_understanding} (25), \texttt{tracking\_shuffled\_objects} (25). Methods: Direct, CoT, Plan-and-Solve, PWBS auto (4 methods). Model: GPT-4o only. Evaluation: exact numeric/string matching. Total: 210 tasks $\times$ 4 methods = 840 calls (PWBS auto = 2 calls/task, actual $\sim$1,050 calls).
+BBH subtasks: BBH subtasks include 30 Boolean expressions, 25 causal judgments, 25 date understanding, and 25 shuffled object tracking. There are four methods: Direct, CoT, Plan-and-Solve, and PWBS automatic, and the model used only GPT-4o. The evaluation is accurate numerical and string matching, and it has been called about 1050 times in four ways on a total of 210 tasks.
 
 \subsubsection{Overall Results}
 
@@ -726,13 +726,13 @@ tracking\_shuffled ($n$=25) & 36.0\% & 36.0\% & 36.0\% & 16.0\% \\
 
 \subsubsection{Analysis}
 
-\textbf{Finding 1: PWBS is effective only where structuring directly aids reasoning.} In \texttt{boolean\_expressions}, logical operations map directly to Formula/Constraint components, yielding \textbf{96.7\%}---the highest score across all methods. For remaining subtasks requiring short answers (A/B/C), structuring overhead outweighs benefits.
+\textbf{Finding 1: As discovery 1, PWBS is only effective where structuring directly helps inference.} In the Boolean expression, logical operations were mapped directly to formulas and constraint components, achieving the highest score of all methods, 96.7%. Structural overhead exceeds the advantage for the remaining sub-tasks that require short answers.
 
-\textbf{Finding 2: 2-call overhead is costly for simple-answer tasks.} PWBS auto's Planner generates a full 6-tuple structure even for tasks requiring a single number or letter. The generated structure disperses the Executor's attention rather than focusing it. This cost is particularly acute on public benchmarks where answers are short and deterministic.
+\textbf{Finding 2: As discovery 2, two-time call overhead is expensive for simple answer tasks.} The PWBS automatic planner creates a full six-element structure for tasks that require only a single number or letter. The resulting structure distributes the executor's attention rather than concentrates it. This cost is particularly large on short-answered and decisive public benchmarks.
 
-\textbf{Finding 3: Task characteristic determines PWBS applicability.} Self-designed benchmarks require complex structured outputs (travel itineraries, code fixes, data analysis), where PWBS excels. Public benchmarks require single correct answers (numbers, choices), where structuring provides limited benefit. \textbf{PWBS is optimized for ``multi-constraint structured output generation,'' not ``single-answer problem solving.''}
+\textbf{Finding 3: With discovery 3, task characteristics determine PWBS applicability.} Its own benchmarks require complex structured outputs such as itinerary, code modification, and data analysis, where PWBS shows strength. Public benchmarks require a single correct answer, such as numbers or options, with limited advantages of structuring. \textbf{PWBS is optimized for multi-constraint structured output generation rather than single correct answer problem solving.}
 
-\textbf{Finding 4: boolean\_expressions as positive evidence.} The 96.7\% result demonstrates that when task structure aligns with PWBS components, significant gains are achievable even on standardized benchmarks. This supports PWBS's value as a \textit{selective} tool rather than a universal solution.
+\textbf{Finding 4: With discovery 4, the Boolean expression is positive evidence.} The results of 96.7% show that meaningful improvements are possible even on standardized benchmarks when task structures are aligned with PWBS components. This supports the value of PWBS as an optional tool rather than a universal solution.
 
 % ============================================================
 % 6. DISCUSSION
@@ -742,7 +742,7 @@ tracking\_shuffled ($n$=25) & 36.0\% & 36.0\% & 36.0\% & 16.0\% \\
 \subsection{Failure-Driven Evolution}
 \label{sec:evolution}
 
-PWBS evolved through iterative failure analysis, not theoretical design. The following table documents the evolution:
+PWBS evolved not by theoretical design but by iterative failure analysis.
 
 \begin{table}[h]
 \centering
@@ -762,19 +762,19 @@ PWBS evolved through iterative failure analysis, not theoretical design. The fol
 \end{tabular}
 \end{table}
 
-\textbf{Phase 1---Constraint Rigidity Paradox.} Initial 5-tuple showed only 20\% success in travel planning. PWBS faithfully tried to meet strict constraints and failed, while Direct loosely interpreted them. Adaptive Tolerance replaces uncontrolled relaxation with systematically controlled relaxation.
+\textbf{Phase 1---Constraint Rigidity Paradox.} In the first stage, the Constraint Rigidity paradox, the initial five factors showed only a 20% success rate in travel planning. While PWBS failed to satisfy strict constraints faithfully, Direct succeeded by loosely interpreting it. The adaptive tolerance replaces the uncontrolled relaxation with the systematically controlled relaxation.
 
-\textbf{Phase 2---Data Loss in 2-call Architecture.} AI Planner omitted data tables, causing Executor to fabricate data. Similar to misapplied information hiding in software engineering---procedures were correctly encapsulated but data was also hidden.
+\textbf{Phase 2---Data Loss in 2-call Architecture.} In the second stage, the data loss in the two-call structure, the AI planner omitted the data table, so the executor fabricated the data. This is similar to the incorrect application of information concealment in software engineering. The procedure was properly encapsulated, but the data were also hidden.
 
-\textbf{Phase 3---Formula Abstraction (5-tuple $\to$ 6-tuple).} Formulas abstracted to natural language, losing coefficients. No existing component could properly house formulas: Goal mixes with task definition, Assumption is semantically mismatched, Constraint differs in nature, Task.method treated as abstraction target. This analysis made Formula's separation as an independent component inevitable.
+\textbf{Phase 3---Formula Abstraction (5-tuple $\to$ 6-tuple).} In the third stage, Formula abstraction, five elements evolved into six. The formula was abstracted into natural language, resulting in a loss of coefficients. The formula could not be properly accepted anywhere in the existing components. Goals are mixed with task definitions, assumptions are not semantically consistent, constraints are different in nature, and methods of work are treated as abstract objects. This analysis made the independent component separation of the formula inevitable.
 
-\textbf{Phase 4---Over-Decomposition.} After 6-tuple introduction, logic/code reached 100\% but travel dropped from 100\% to 60\%. Travel's budget constraint is a sum of sub-items; decomposing into separate Tasks prevents global optimization. Key lesson: ``Structuring is not always beneficial.''
+\textbf{Phase 4---Over-Decomposition.} In stage four, over-decomposition, logic and code reached 100% after the introduction of six elements, but travel fell from 100% to 60%. Since the budget constraints of travel are the sum of sub-items, global optimization becomes impossible when decomposed into separate tasks. The key lesson is that "structuring is not always beneficial."
 
-\textbf{Phase 5---CSR Transparency Paradox.} PWBS CSR of 48.7\% vs Direct's 84.3\% was not a performance difference but measurement bias from PWBS's higher constraint detectability.
+\textbf{Phase 5---CSR Transparency Paradox.} In the fifth stage, CSR transparency paradox, 48.7% of CSR in PWBS versus 84.3% of Direct was not a performance difference, but a measurement bias due to the high constraints detectability of PWBS.
 
 \subsection{Repositioning PWBS as an Adaptive Toolkit}
 
-The most important finding: \textbf{PWBS should be used as an adaptive toolkit}, not a monolithic framework.
+The most important finding is that PWBS should be used as an adaptive suite of tools rather than a single framework.
 
 \begin{table}[h]
 \centering
@@ -796,30 +796,30 @@ High consistency needed & Full PWBS & Scaffolding constrains paths \\
 
 \subsection{Universal Value of Assumption Surfacing}
 
-Assumption surfacing is the only component showing consistent +4.0\%p improvement regardless of model. This suggests PWBS's core contribution is not complex structuring but making explicit the assumptions LLMs implicitly create.
+Assumption surfacing is the only component showing a consistent 4.0 percentage point improvement regardless of the model. This suggests that the key contribution of PWBS is not to complicated structuring but to explicitly make assumptions that LLM makes implicit.
 
-While CoT structures ``how to reason,'' Assumption surfacing structures ``on what basis to reason.'' This finding suggests assumption articulation is the most cost-effective intervention in prompt engineering.
+While CoT structures "how to infer," Assumption surfacing structures "on what basis to infer". This finding suggests that Assumption articulation is the most cost-effective intervention in prompt engineering.
 
 \subsection{Data/Formula Inclusion: General Principle for Multi-call Architectures}
 
-PWBS auto's Data Preserving and Formula Preserving failures reveal a general principle: \textbf{structural decomposition must not abstract away original problem data}. This principle---information fidelity---applies to all multi-call prompting systems, not just PWBS.
+Data Preserving and formal retention failures of PWBS automatic reveal general principles. Structural decomposition should not abstract the original problem data. This principle, information fidelity, applies not only to PWBS, but also to all multi-call prompting systems.
 
 \subsection{Limitations}
 
 \begin{enumerate}[leftmargin=2em]
-  \item \textbf{Task type dependency:} Public benchmark results (GSM8K \citep{cobbe2021gsm8k}, BBH \citep{suzgun2023challenging}) confirm PWBS is most effective for multi-constraint structured outputs, not single-answer problems. This scope was identified \emph{post-hoc} through experimental results rather than pre-registered as a hypothesis, which limits the strength of the claim. Applicability to other task types (e.g., open-ended generation, dialogue) remains unexplored. Future work should pre-register PWBS's applicability scope and validate on domain-specific benchmarks (e.g., TravelPlanner, SWE-bench Lite) that require structured outputs.
+  \item \textbf{Task type dependency:} First, as task type dependence, public benchmark results confirm that PWBS is most effective for multi-constraint structured output and not for single correct answer questions. This range was confirmed ex post facto by experimental results, not by preregistered hypotheses, which limits the strength of the argument. Applicability to other task types such as open generation or dialogue has not been explored. Subsequent studies require pre-registration of the coverage of PWBS and validation on domain-specific benchmarks that require structured output.
 
-  \item \textbf{Model diversity:} Limited to GPT-4o and GPT-4o-mini. Generalization to Claude, Llama, etc. requires verification.
+  \item \textbf{Model diversity:} Second, as model diversity, it is limited to GPT-4o and GPT-4o-mini, and generalization for Claude, Llama, etc. requires verification.
 
-  \item \textbf{Lack of statistical significance:} No significant SR differences between methods on self-designed benchmarks ($n=75$), possibly due to benchmark size. Ablation observations ($n=25$ per category) are directional and underpowered for formal significance testing.
+  \item \textbf{Lack of statistical significance:} Third, due to the absence of statistical significance, there is no significant difference in success rates between methods on their own benchmarks, which may be due to their benchmark size. Twenty-five ablation observations by category are directional and lack power in the formal significance test.
 
-  \item \textbf{Evaluator bias (LLM-as-judge):} GPT-4o serves as both task executor and judge evaluator, creating potential self-preference bias \citep{zheng2024judging}. The same model may systematically favor its own output style or reasoning patterns. While public benchmark evaluation uses objective exact matching (mitigating this concern for GSM8K/BBH), the self-designed benchmark evaluation relies on GPT-4o judge scoring for Task Success Rate and Step Validity Rate. A partial human annotation study (e.g., 10--20\% sample) would strengthen these results; we leave this for future work.
+  \item \textbf{Evaluator bias (LLM-as-judge):} Fourth, as an evaluator bias, GPT-4o is used as a task executor and review evaluator, creating a potential self-preferred bias. While public benchmark evaluation mitigates this concern using objective accurate matching, its own benchmark evaluation relies on GPT-4o screening scoring. A partial human annotation study will reinforce this result, which leaves it as a follow-up study.
 
-  \item \textbf{Human dependency of PWBS manual:} Requires expert 6-tuple authoring. PWBS auto mitigates this at 2-call cost.
+  \item \textbf{Human dependency of PWBS manual:} Fifth, with the human dependence of PWBS manual, expert six-element writing is required, and PWBS automatic mitigates this at the cost of two calls.
 
-  \item \textbf{2-call overhead:} PWBS auto's Planner adds latency and cost. For simple tasks, this overhead outweighs structural benefits, as demonstrated by public benchmark results.
+  \item \textbf{2-call overhead:} Sixth, with two call overhead, the PWBS automatic planner adds delay and cost. In a simple task, this overhead exceeds the structural advantage, and public benchmark results demonstrate this.
 
-  \item \textbf{CSR Transparency Paradox requires further validation:} Our claim that PWBS's low CSR (48.7\%) reflects improved transparency rather than worse performance is based on the observation that other methods have higher skip rates (43\% vs 33\%). However, we lack direct evidence that skipped constraints were actually violated at similar rates. A human evaluation study measuring true constraint violation rates across all methods would be needed to substantiate this claim fully.
+  \item \textbf{CSR Transparency Paradox requires further validation:} Seventh, as a need for further verification of the CSR transparency paradox, the argument that low CSR in PWBS reflects improved transparency rather than worse performance is based on the observation of high skip rates in other methods. However, there is a lack of direct evidence that skipped constraints are indeed violated at a similar rate. Fully supporting this argument requires a human evaluation study that measures the actual constraints violation rate in all methods.
 \end{enumerate}
 
 % ============================================================
@@ -829,48 +829,48 @@ PWBS auto's Data Preserving and Formula Preserving failures reveal a general pri
 
 \subsection{Summary}
 
-We proposed PWBS, applying WBS principles to LLM prompt design with a 6-tuple (G-A-F-C-T-V) and systematic 4-stage Invalidation Test.
+This study proposed a PWBS with six elements and a systematic four-step invalidation test by applying the WBS principle to the LLM prompt design.
 
-Key findings from 75 self-designed and 210 public benchmark tasks:
+Key findings on 75 self-designed and 210 public benchmark tasks are as follows.
 
 \begin{enumerate}[leftmargin=2em]
-  \item Assumption surfacing yields +4.0\%p model-agnostic improvement.
-  \item PWBS effectiveness inversely correlates with model capability.
-  \item Component accumulation shows diminishing returns; selective application is superior.
-  \item Code debugging Reasoning Consistency improves +32.0\%p.
-  \item CSR Transparency Paradox: PWBS's low CSR reflects improved transparency.
-  \item Public benchmarks confirm PWBS is most effective for structured-output tasks (boolean\_expressions: 96.7\%), while single-answer tasks show limited benefit.
+  \item Assumption surfacing results in a 4.0 percentage point improvement regardless of the model.
+  \item The effectiveness of PWBS is inversely correlated with model ability.
+  \item Accumulation of components shows a diminishing returns, and selective application is superior.
+  \item Code debugging inference consistency is improved by 32.0 percentage points.
+  \item As a CSR transparency paradox, low CSR of PWBS reflects improved transparency.
+  \item Public benchmarks confirm that PWBS is the most effective on structured output tasks, achieving 96.7% on the Boolean expression, and its benefits are limited on a single correct answer task.
 \end{enumerate}
 
 \subsection{Redefined Contributions}
 
 \begin{itemize}[leftmargin=2em]
-  \item Discovery of universal value of Assumption surfacing
-  \item Identification of inverse model capability--structure demand relationship
-  \item PWBS as adaptive toolkit with selective application guide
-  \item Transparent record of failure-driven evolution (5-tuple $\to$ 6-tuple)
-  \item Multi-call information preservation principles (Data/Formula Preserving)
+  \item the discovery of the universal value of Assumption surfacing.
+  \item Identifying the inverse relationship between model capability and structural needs.
+  \item PWBS as a suite of adaptive tools with optional application guides.
+  \item Transparent record of failure-based evolution from 5 elements to 6 elements.
+  \item Data preservation and Formula Preserving, which are principles of multi-call information preservation.
 \end{itemize}
 
 \subsection{Future Work}
 
 \begin{enumerate}[leftmargin=2em]
-  \item Domain-specific public benchmarks (TravelPlanner, SWE-bench Lite) targeting multi-constraint structured outputs
-  \item Model diversity (Claude, Llama, Gemini)
-  \item Automatic component selection via meta-learner
-  \item Independent study of Assumption surfacing across prompting paradigms
-  \item Task-type classifier to predict PWBS applicability before deployment
+  \item Validation on a domain-specific public benchmark that requires multiple constraint structured outputs.
+  \item Expanding model diversity to Claude, Llama, Gemini, and more.
+  \item Automatic component selection via meta learner.
+  \item An independent study of Assumption surfacing across the prompting paradigm.
+  \item Task type classifier that predicts PWBS applicability before deployment.
 \end{enumerate}
 
 \subsection{Practical Recommendations}
 
 \begin{itemize}[leftmargin=2em]
-  \item \textbf{Always state Assumptions:} highest cost-effectiveness intervention.
-  \item \textbf{Add Constraints for weak models:} compensates unrecognized constraints.
-  \item \textbf{Minimize structure for strong models:} excessive structure disperses attention.
-  \item \textbf{Use Formula when formulas present:} prevents coefficient loss.
-  \item \textbf{Don't separate coupled constraints:} hinders global optimization.
-  \item \textbf{Use full PWBS when consistency matters:} structural scaffolding stabilizes reasoning paths.
+  \item \textbf{Always state Assumptions:} Always specify assumptions, this is the most cost effective intervention.
+  \item \textbf{Add Constraints for weak models:} Add constraints to weak models, complementing unrecognized constraints.
+  \item \textbf{Minimize structure for strong models:} Minimize structure for strong models, excessive structure distracts attention.
+  \item \textbf{Use Formula when formulas present:} When there is a formula, use the formula, prevent coefficient loss.
+  \item \textbf{Don't separate coupled constraints:} Do not separate the combined constraints, hindering global optimization.
+  \item \textbf{Use full PWBS when consistency matters:} Use full PWBS when consistency is important, structural scaffolding stabilizes the inference path.
 \end{itemize}
 
 % ============================================================
