@@ -141,7 +141,7 @@ Full reference list (16 papers) in `main.tex`.
 
 ## Authors
 
-**Donho Ko**, **Eunyoung Shin** — DIFAI Inc.
+**Donho Ko**, **Eunyoung Shin**
 
 ## License
 
